@@ -325,6 +325,7 @@
       var result = await window.MatchPointReviews.getProductReviews(productId);
       renderSummary(result.averageRating, result.totalCount);
       renderList(result.reviews);
+      injectProductReviewJsonLd(result);
       setStatus(statusEl, '', null);
     } catch (err) {
       renderSummary(0, 0);
@@ -334,6 +335,180 @@
         (err && err.message) || 'Erro ao carregar avaliações.',
         'error'
       );
+    }
+  }
+
+  function normalizePageUrl(url) {
+    try {
+      var u = new URL(url || window.location.href, window.location.origin);
+      u.hash = '';
+      u.search = '';
+      var path = u.pathname.replace(/\/+$/, '') || '/';
+      return u.origin + path + '/';
+    } catch (e) {
+      return String(url || '').split('?')[0].split('#')[0];
+    }
+  }
+
+  function urlsMatch(a, b) {
+    return normalizePageUrl(a) === normalizePageUrl(b);
+  }
+
+  function buildAggregateRating(average, total) {
+    return {
+      '@type': 'AggregateRating',
+      ratingValue: Number(average).toFixed(1),
+      reviewCount: String(total),
+      ratingCount: String(total),
+      bestRating: '5',
+      worstRating: '1',
+    };
+  }
+
+  function buildReviewNodes(reviews) {
+    var nodes = [];
+    var max = Math.min(reviews.length, 8);
+    for (var i = 0; i < max; i++) {
+      var r = reviews[i];
+      if (!r) continue;
+      var node = {
+        '@type': 'Review',
+        author: {
+          '@type': 'Person',
+          name: String(r.customer_name || 'Cliente'),
+        },
+        datePublished: String(r.created_at || '').slice(0, 10),
+        reviewBody: String(r.comment || ''),
+        reviewRating: {
+          '@type': 'Rating',
+          ratingValue: String(r.rating),
+          bestRating: '5',
+          worstRating: '1',
+        },
+      };
+      if (r.title) node.name = String(r.title);
+      nodes.push(node);
+    }
+    return nodes;
+  }
+
+  function findMainProductInJsonLd(data, pageUrl) {
+    if (!data || typeof data !== 'object') return null;
+
+    if (Array.isArray(data)) {
+      for (var i = 0; i < data.length; i++) {
+        var found = findMainProductInJsonLd(data[i], pageUrl);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    var type = data['@type'];
+    var isProduct =
+      type === 'Product' ||
+      (Array.isArray(type) && type.indexOf('Product') !== -1);
+
+    if (isProduct) {
+      var offerUrl =
+        data.offers && (data.offers.url || (data.offers[0] && data.offers[0].url));
+      var productUrl = data.url || data['@id'] || offerUrl;
+      if (productUrl && urlsMatch(productUrl, pageUrl)) {
+        return data;
+      }
+      // Product “solto” sem URL de similares: só aceita se estiver sozinho no doc
+      // (tratado pelo caller via WebPage.mainEntity)
+    }
+
+    if (
+      (type === 'WebPage' ||
+        (Array.isArray(type) && type.indexOf('WebPage') !== -1)) &&
+      data.mainEntity
+    ) {
+      var main = data.mainEntity;
+      var mainType = main && main['@type'];
+      var mainIsProduct =
+        mainType === 'Product' ||
+        (Array.isArray(mainType) && mainType.indexOf('Product') !== -1);
+      if (mainIsProduct) {
+        var mainUrl = main['@id'] || main.url || (main.offers && main.offers.url);
+        if (!mainUrl || urlsMatch(mainUrl, pageUrl)) {
+          return main;
+        }
+      }
+    }
+
+    if (data['@graph']) {
+      return findMainProductInJsonLd(data['@graph'], pageUrl);
+    }
+
+    return null;
+  }
+
+  /**
+   * Melhor prática SEO: enriquecer o Product JSON-LD que a Nuvemshop já emite
+   * (WebPage.mainEntity), em vez de criar um segundo Product para a mesma URL.
+   */
+  function injectProductReviewJsonLd(result) {
+    if (!result || !result.totalCount || result.totalCount < 1) return;
+
+    var pageUrl = normalizePageUrl(window.location.href);
+    var aggregate = buildAggregateRating(result.averageRating, result.totalCount);
+    var reviewNodes = buildReviewNodes(result.reviews || []);
+    var scripts = document.querySelectorAll('script[type="application/ld+json"]');
+    var patched = false;
+
+    for (var i = 0; i < scripts.length; i++) {
+      var el = scripts[i];
+      if (el.id === 'mp-reviews-jsonld') continue;
+      var raw = el.textContent || '';
+      if (!raw || raw.indexOf('Product') === -1) continue;
+
+      var data;
+      try {
+        data = JSON.parse(raw);
+      } catch (e) {
+        continue;
+      }
+
+      var product = findMainProductInJsonLd(data, pageUrl);
+      if (!product) continue;
+
+      product.aggregateRating = aggregate;
+      if (reviewNodes.length) {
+        product.review = reviewNodes;
+      }
+      if (!product['@id']) {
+        product['@id'] = pageUrl;
+      }
+
+      el.textContent = JSON.stringify(data);
+      patched = true;
+      break;
+    }
+
+    // Fallback raro: se a Nuvemshop não tiver Product da PDP, cria um bloco próprio
+    var existingFallback = document.getElementById('mp-reviews-jsonld');
+    if (existingFallback) existingFallback.remove();
+
+    if (!patched) {
+      var name =
+        (window.LS && LS.product && LS.product.name) ||
+        (document.querySelector('h1') && document.querySelector('h1').textContent) ||
+        document.title;
+      var payload = {
+        '@context': 'https://schema.org/',
+        '@type': 'Product',
+        '@id': pageUrl,
+        name: String(name || '').trim(),
+        url: pageUrl,
+        aggregateRating: aggregate,
+      };
+      if (reviewNodes.length) payload.review = reviewNodes;
+      var script = document.createElement('script');
+      script.type = 'application/ld+json';
+      script.id = 'mp-reviews-jsonld';
+      script.textContent = JSON.stringify(payload);
+      document.head.appendChild(script);
     }
   }
 
