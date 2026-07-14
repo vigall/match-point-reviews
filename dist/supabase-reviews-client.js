@@ -7,7 +7,7 @@
  * Expõe: window.MatchPointReviews
  *   - getProductReviews(productId)
  *   - getProductRatingSummaries(productIds)
- *   - submitReview(reviewData)
+ *   - submitReview(reviewData) — publica na hora (approved=true); Telegram notifica
  */
 (function (global) {
   'use strict';
@@ -272,7 +272,7 @@
       if (input.website) {
         return {
           ok: true,
-          message: 'Avaliação enviada! Será publicada após moderação.',
+          message: 'Avaliação publicada. Obrigado!',
         };
       }
 
@@ -290,7 +290,7 @@
         title: input.title,
         comment: input.comment,
         photo_url: photoUrl,
-        approved: false,
+        approved: true,
       });
 
       if (insertResult.error) {
@@ -299,7 +299,7 @@
 
       return {
         ok: true,
-        message: 'Avaliação enviada! Será publicada após moderação.',
+        message: 'Avaliação publicada. Obrigado!',
       };
     } catch (err) {
       console.error('[MatchPointReviews] submitReview:', err);
