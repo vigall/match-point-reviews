@@ -1,17 +1,24 @@
 /**
- * Widget de UI — avaliações na página do produto (Nuvemshop MVP).
+ * Widget de UI — avaliações (Nuvemshop MVP).
  *
  * Pré-requisitos (nesta ordem):
  *   1. @supabase/supabase-js@2 (CDN)
  *   2. supabase-reviews-client.js → window.MatchPointReviews
  *   3. Este arquivo
  *
- * Markup #mp-reviews:
+ * Markup #mp-reviews (PDP):
  *   - via product.tpl (FTP), OU
  *   - auto-injetado neste script (caminho híbrido) usando LS.product.id
+ *
+ * Listagens / relacionados:
+ *   - injeta ★ média + contagem nos cards .js-item-product[data-product-id]
  */
 (function () {
   'use strict';
+
+  var LISTING_MARKER = 'data-mp-rating';
+  var listingObserver = null;
+  var listingRefreshTimer = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -402,7 +409,144 @@
     });
   }
 
-  function init() {
+  function collectListingCards() {
+    var nodes = document.querySelectorAll(
+      '.js-item-product[data-product-id], [data-component="product-list-item"][data-product-id], [data-store^="product-item-"][data-product-id]'
+    );
+    var cards = [];
+
+    for (var i = 0; i < nodes.length; i++) {
+      var card = nodes[i];
+      if (card.hasAttribute(LISTING_MARKER)) continue;
+      var productId = String(card.getAttribute('data-product-id') || '').trim();
+      if (!productId) {
+        card.setAttribute(LISTING_MARKER, '0');
+        continue;
+      }
+      // Evita race com MutationObserver enquanto o fetch ainda corre
+      card.setAttribute(LISTING_MARKER, 'pending');
+      cards.push({ card: card, productId: productId });
+    }
+
+    return cards;
+  }
+
+  function buildListingRatingHtml(average, total) {
+    var countLabel = total === 1 ? '1' : String(total);
+    return (
+      '<div class="mp-item-rating" title="' +
+      escapeHtml(average.toFixed(1)) +
+      ' de 5 (' +
+      escapeHtml(String(total)) +
+      ' avaliaç' +
+      (total === 1 ? 'ão' : 'ões') +
+      ')">' +
+      '<span class="mp-item-rating__stars" aria-hidden="true">' +
+      renderStars(average) +
+      '</span>' +
+      '<span class="mp-item-rating__meta">' +
+      '<span class="mp-item-rating__average">' +
+      escapeHtml(average.toFixed(1)) +
+      '</span>' +
+      '<span class="mp-item-rating__count">(' +
+      escapeHtml(countLabel) +
+      ')</span>' +
+      '</span>' +
+      '</div>'
+    );
+  }
+
+  function insertListingRating(card, average, total) {
+    if (!card || card.querySelector('.mp-item-rating')) {
+      card.setAttribute(LISTING_MARKER, '1');
+      return;
+    }
+
+    var wrap = document.createElement('div');
+    wrap.innerHTML = buildListingRatingHtml(average, total);
+    var badge = wrap.firstChild;
+
+    var nameEl =
+      card.querySelector('.js-item-name') ||
+      card.querySelector('[data-store^="product-item-name"]');
+    var priceEl =
+      card.querySelector('.item-price-container') ||
+      card.querySelector('[data-store^="product-item-price"]');
+    var descEl =
+      card.querySelector('.js-item-description') ||
+      card.querySelector('.item-description');
+
+    if (nameEl && nameEl.parentNode) {
+      nameEl.parentNode.insertBefore(badge, nameEl.nextSibling);
+    } else if (priceEl && priceEl.parentNode) {
+      priceEl.parentNode.insertBefore(badge, priceEl);
+    } else if (descEl) {
+      descEl.appendChild(badge);
+    } else {
+      card.appendChild(badge);
+    }
+
+    card.setAttribute(LISTING_MARKER, '1');
+  }
+
+  function markCardsWithoutRating(cards) {
+    for (var i = 0; i < cards.length; i++) {
+      cards[i].card.setAttribute(LISTING_MARKER, '0');
+    }
+  }
+
+  async function refreshListingRatings() {
+    if (!window.MatchPointReviews || !window.MatchPointReviews.getProductRatingSummaries) {
+      return;
+    }
+
+    var cards = collectListingCards();
+    if (!cards.length) return;
+
+    var ids = [];
+    for (var i = 0; i < cards.length; i++) {
+      ids.push(cards[i].productId);
+    }
+
+    try {
+      var summaries = await window.MatchPointReviews.getProductRatingSummaries(ids);
+      for (var j = 0; j < cards.length; j++) {
+        var item = cards[j];
+        var summary = summaries[item.productId];
+        if (summary && summary.totalCount > 0) {
+          insertListingRating(item.card, summary.averageRating, summary.totalCount);
+        } else {
+          item.card.setAttribute(LISTING_MARKER, '0');
+        }
+      }
+    } catch (err) {
+      console.error('[MatchPointReviews] listing ratings:', err);
+      markCardsWithoutRating(cards);
+    }
+  }
+
+  function scheduleListingRefresh() {
+    if (listingRefreshTimer) {
+      clearTimeout(listingRefreshTimer);
+    }
+    listingRefreshTimer = setTimeout(function () {
+      listingRefreshTimer = null;
+      refreshListingRatings();
+    }, 250);
+  }
+
+  function observeListingCards() {
+    if (listingObserver || !document.body) return;
+    listingObserver = new MutationObserver(function () {
+      scheduleListingRefresh();
+    });
+    listingObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+  }
+
+  function initProductPage() {
     if (!isProductPage()) return;
 
     var productId = detectProductId();
@@ -422,6 +566,12 @@
 
     loadReviews(productId);
     initForm(productId);
+  }
+
+  function init() {
+    initProductPage();
+    refreshListingRatings();
+    observeListingCards();
   }
 
   if (document.readyState === 'loading') {

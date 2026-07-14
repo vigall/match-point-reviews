@@ -6,6 +6,7 @@
  *
  * Expõe: window.MatchPointReviews
  *   - getProductReviews(productId)
+ *   - getProductRatingSummaries(productIds)
  *   - submitReview(reviewData)
  */
 (function (global) {
@@ -180,6 +181,77 @@
   }
 
   /**
+   * Busca média e quantidade de reviews aprovados para vários produtos (listagens).
+   * @param {Array<string|number>} productIds
+   * @returns {Promise<Record<string, {averageRating: number, totalCount: number}>>}
+   */
+  async function getProductRatingSummaries(productIds) {
+    var summaries = {};
+    if (!productIds || productIds.length === 0) return summaries;
+
+    var unique = [];
+    var seen = {};
+    for (var i = 0; i < productIds.length; i++) {
+      var id = String(productIds[i] || '').trim();
+      if (!id || seen[id]) continue;
+      seen[id] = true;
+      unique.push(id);
+    }
+    if (unique.length === 0) return summaries;
+
+    try {
+      var supabase = getClient();
+      var CHUNK = 80;
+      var rows = [];
+
+      for (var offset = 0; offset < unique.length; offset += CHUNK) {
+        var chunk = unique.slice(offset, offset + CHUNK);
+        var result = await supabase
+          .from('reviews')
+          .select('product_id, rating')
+          .in('product_id', chunk)
+          .eq('approved', true);
+
+        if (result.error) {
+          throw new Error(result.error.message);
+        }
+        if (result.data && result.data.length) {
+          for (var r = 0; r < result.data.length; r++) {
+            rows.push(result.data[r]);
+          }
+        }
+      }
+
+      var buckets = {};
+      for (var j = 0; j < rows.length; j++) {
+        var row = rows[j];
+        var pid = String(row.product_id);
+        if (!buckets[pid]) buckets[pid] = [];
+        buckets[pid].push(row);
+      }
+
+      for (var k = 0; k < unique.length; k++) {
+        var key = unique[k];
+        var list = buckets[key] || [];
+        if (list.length === 0) continue;
+        summaries[key] = {
+          averageRating: averageRating(list),
+          totalCount: list.length,
+        };
+      }
+
+      return summaries;
+    } catch (err) {
+      console.error('[MatchPointReviews] getProductRatingSummaries:', err);
+      throw new Error(
+        err && err.message
+          ? err.message
+          : 'Não foi possível carregar as notas dos produtos.'
+      );
+    }
+  }
+
+  /**
    * Envia uma nova avaliação (fica pending até moderação).
    * @param {object} reviewData
    * @param {string|number} reviewData.productId
@@ -241,6 +313,7 @@
 
   global.MatchPointReviews = {
     getProductReviews: getProductReviews,
+    getProductRatingSummaries: getProductRatingSummaries,
     submitReview: submitReview,
     uploadReviewPhoto: uploadReviewPhoto,
   };

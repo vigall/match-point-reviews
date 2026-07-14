@@ -29,14 +29,18 @@ https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/widget/reviews-widge
 
 ## Snippet GTM
 
+Use o arquivo [`docs/gtm-snippet.html`](docs/gtm-snippet.html) (já com `?v=` para cache-bust).
+
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/dist/reviews-styles.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/dist/reviews-styles.css?v=20260714c" />
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/dist/supabase-reviews-client.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/dist/reviews-widget.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/dist/supabase-reviews-client.js?v=20260714c"></script>
+<script src="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@main/dist/reviews-widget.js?v=20260714c"></script>
 ```
 
-O widget auto-injeta a seção na PDP (`LS.product.id`). Não precisa editar `product.tpl`.
+O widget:
+- na **PDP**, auto-injeta a seção de avaliações (`LS.product.id`) — sem editar `product.tpl`
+- nas **listagens / similar**, injeta estrelas + média nos cards (`.js-item-product[data-product-id]`) só quando houver review aprovada
 
 ## Segurança
 

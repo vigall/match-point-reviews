@@ -304,6 +304,45 @@
   position: relative;
 }
 
+/* Estrelas compactas na listagem / produtos similares */
+.mp-item-rating {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.4rem;
+  margin: -0.35rem 0 0.65rem;
+  font-family: inherit;
+  line-height: 1.2;
+  color: #555;
+}
+
+.mp-item-rating__stars {
+  display: inline-flex;
+  gap: 0.05rem;
+  font-size: 0.9rem;
+  color: #d4d4d4;
+}
+
+.mp-item-rating__stars .mp-star--filled {
+  color: #f5a623;
+}
+
+.mp-item-rating__meta {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+}
+
+.mp-item-rating__average {
+  font-weight: 600;
+  color: #333;
+}
+
+.mp-item-rating__count {
+  color: #777;
+}
+
 @media (min-width: 640px) {
   .mp-reviews {
     padding: 1.5rem;
