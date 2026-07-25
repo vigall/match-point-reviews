@@ -113,19 +113,18 @@
     mount.innerHTML = buildMarkup(productId);
     var section = mount.firstChild;
 
-    // Preferir logo após o formulário de compra (mais visível no Toluca/Nuvemshop)
-    var productForm =
-      document.getElementById('product_form') ||
-      document.querySelector('.js-product-form') ||
-      document.querySelector('form[data-store^="product-form-"]');
-
+    // Padrão de mercado: descrição primeiro; avaliações por último na PDP
+    // (Toluca: data-store="product-description-{id}" — nunca no buy box).
     var description =
+      document.querySelector('[data-store^="product-description"]') ||
       document.querySelector('.product-description') ||
       document.querySelector('[data-store="product-description"]') ||
       document.querySelector('#product-description') ||
       document.querySelector('.js-product-description') ||
       document.querySelector('.product-detail-description') ||
-      document.querySelector('[data-component="product-description"]');
+      document.querySelector('[data-component="product-description"]') ||
+      document.querySelector('.js-product-detail-description') ||
+      document.querySelector('.product-description-container');
 
     var related =
       document.getElementById('related-products') ||
@@ -136,9 +135,7 @@
 
     var footer = document.querySelector('footer') || document.getElementById('footer');
 
-    if (productForm && productForm.parentNode) {
-      productForm.parentNode.insertBefore(section, productForm.nextSibling);
-    } else if (description && description.parentNode) {
+    if (description && description.parentNode) {
       description.parentNode.insertBefore(section, description.nextSibling);
     } else if (related && related.parentNode) {
       related.parentNode.insertBefore(section, related);
