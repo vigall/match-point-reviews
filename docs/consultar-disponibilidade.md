@@ -6,10 +6,10 @@ Script híbrido (GTM + CDN) para a loja Nuvemshop Toluca.
 
 - Esconde a tag **Esgotado** na PDP e nas listagens
 - Em **todas as PDPs**, troca Comprar/Esgotado por **Consultar disponibilidade**
+- Nas **listagens / relacionados**: converte o Comprar dos cards; se o tema omitir o botão (estoque 0), **injeta** o CTA
 - Desbloqueia o botão quando o tema deixa `disabled` / `nostock`
-- Abre WhatsApp `+55 19 99717-1734` com mensagem pronta (nome, preço, link)
-- Bloqueia add-to-cart no formulário da PDP
-- **Não** altera o botão Comprar dos cards da listagem
+- Abre WhatsApp `+55 19 99717-1734` com mensagem pronta (nome, preço, link do produto)
+- Bloqueia add-to-cart no formulário da PDP e nos cards
 
 ## Arquivos
 
@@ -22,7 +22,7 @@ Script híbrido (GTM + CDN) para a loja Nuvemshop Toluca.
 
 Repo: [vigall/match-point-reviews](https://github.com/vigall/match-point-reviews)
 
-Substitua `ffd4514` pelo commit publicado:
+Substitua `{SHA}` pelo commit publicado:
 
 ```text
 https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@ffd4514/dist/consultar-disponibilidade.css
@@ -49,7 +49,7 @@ Salvar → Enviar → **Publicar**.
    - Abre WhatsApp com produto/preço/link
    - Não adiciona ao carrinho
 2. PDP com estoque (qualquer produto disponível): mesmo CTA WhatsApp; preço visível
-3. Listagem / categoria / similares: cards sem tag Esgotado; Comprar do card inalterado
+3. Listagem / categoria / similares: cards sem tag Esgotado; botão **Consultar disponibilidade** (convertido ou injetado)
 4. Mobile: botão principal da PDP também abre WhatsApp
 
 ## Mensagem WhatsApp

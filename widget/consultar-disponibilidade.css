@@ -19,8 +19,21 @@
 }
 
 .mp-lead-cta.btn-add-to-cart,
-.mp-lead-cta.js-prod-submit-form {
+.mp-lead-cta.js-prod-submit-form,
+.mp-lead-cta-listing {
   cursor: pointer !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+}
+
+.mp-lead-cta-listing {
+  white-space: normal;
+  line-height: 1.2;
+  font-size: 0.75rem;
+  padding-top: 0.55rem;
+  padding-bottom: 0.55rem;
+}
+
+.mp-lead-listing-wrap {
+  width: 100%;
 }
