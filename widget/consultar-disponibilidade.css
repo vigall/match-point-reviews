@@ -1,6 +1,6 @@
 /**
  * Match Point — Consultar disponibilidade (leads WhatsApp)
- * Esconde badge "Esgotado" e tipografia do hint sob o CTA.
+ * Esconde badge "Esgotado", ícone de sacola da listagem e tipografia do hint.
  */
 
 /* Tag Esgotado — PDP, listagens, relacionados, quickshop */
@@ -24,14 +24,30 @@
   cursor: pointer !important;
   opacity: 1 !important;
   pointer-events: auto !important;
+  /* Toluca .cart esconde/desloca o texto em favor do ícone */
+  text-indent: 0 !important;
+  font-size: inherit !important;
+  color: #fff !important;
+  background-image: none !important;
+}
+
+/* Esconde sacola do quickshop quando o CTA vira lead */
+.mp-lead-cta ~ .js-quickshop-bag,
+.mp-lead-cta ~ .item-quickshop-icon,
+.mp-lead-cta ~ .js-open-quickshop-icon,
+.js-item-submit-container:has(.mp-lead-cta) .js-quickshop-bag,
+.js-item-submit-container:has(.mp-lead-cta) .item-quickshop-icon,
+.item-submit-container:has(.mp-lead-cta) .js-quickshop-bag,
+.item-submit-container:has(.mp-lead-cta) .item-quickshop-icon {
+  display: none !important;
 }
 
 .mp-lead-cta-listing {
   white-space: normal;
-  line-height: 1.2;
-  font-size: 0.75rem;
-  padding-top: 0.55rem;
-  padding-bottom: 0.55rem;
+  line-height: 1.25;
+  font-size: 0.72rem !important;
+  padding: 0.55rem 0.4rem !important;
+  min-height: 2.5rem;
 }
 
 .mp-lead-listing-wrap {

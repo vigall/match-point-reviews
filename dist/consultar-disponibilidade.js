@@ -141,6 +141,7 @@
     el.removeAttribute('disabled');
     el.removeAttribute('aria-disabled');
     el.classList.remove('nostock');
+    el.classList.remove('cart');
     el.classList.add('mp-lead-cta');
     if (el.tagName === 'INPUT' || el.tagName === 'BUTTON') {
       try {
@@ -150,6 +151,23 @@
       }
     }
     setButtonLabel(el);
+    hideCartIconsNear(el);
+  }
+
+  /** Toluca overlay do sacola fica por cima do texto se a classe cart permanecer. */
+  function hideCartIconsNear(el) {
+    var container =
+      el.closest('.js-item-submit-container') ||
+      el.closest('.item-submit-container') ||
+      el.parentNode;
+    if (!container || !container.querySelectorAll) return;
+    var icons = container.querySelectorAll(
+      '.js-quickshop-bag, .item-quickshop-icon, .js-open-quickshop-icon'
+    );
+    for (var i = 0; i < icons.length; i++) {
+      icons[i].style.setProperty('display', 'none', 'important');
+      icons[i].setAttribute('aria-hidden', 'true');
+    }
   }
 
   function ensurePdpHint(el) {
@@ -348,6 +366,7 @@
 
       if (buyBtns.length) {
         for (var j = 0; j < buyBtns.length; j++) {
+          buyBtns[j].classList.add('mp-lead-cta-listing');
           bindLeadClick(buyBtns[j], meta, false);
         }
         var form = card.querySelector('form.js-product-form');
