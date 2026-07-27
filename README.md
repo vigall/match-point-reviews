@@ -53,8 +53,8 @@ Projeto: `qabioapmusytvoaevwra` · SQL: [`sql/001_reviews.sql`](sql/001_reviews.
 ## Leads — Consultar disponibilidade
 
 ```text
-https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.css
-https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.js
+https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@ffd4514/dist/consultar-disponibilidade.css
+https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@ffd4514/dist/consultar-disponibilidade.js
 ```
 
 Detalhes: [`docs/consultar-disponibilidade.md`](docs/consultar-disponibilidade.md). Incluir na **mesma tag GTM** das reviews.
