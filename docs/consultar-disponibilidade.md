@@ -23,8 +23,8 @@ Script híbrido (GTM + CDN) para a loja Nuvemshop Toluca.
 Repo: [vigall/match-point-reviews](https://github.com/vigall/match-point-reviews)
 
 ```text
-https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.css
-https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.js
+https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@17981de/dist/consultar-disponibilidade.css
+https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@17981de/dist/consultar-disponibilidade.js
 ```
 
 ## GTM (mesma tag das reviews)
@@ -33,8 +33,8 @@ Container `GTM-PWRPPNCD`. Editar a tag HTML das reviews e **acrescentar no final
 
 ```html
 <!-- Match Point Leads — Consultar disponibilidade -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.css" />
-<script src="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@17981de/dist/consultar-disponibilidade.css" />
+<script src="https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@17981de/dist/consultar-disponibilidade.js"></script>
 ```
 
 Salvar → Enviar → **Publicar**.
