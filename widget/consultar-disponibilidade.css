@@ -1,0 +1,26 @@
+/**
+ * Match Point — Consultar disponibilidade (leads WhatsApp)
+ * Esconde badge "Esgotado" e tipografia do hint sob o CTA.
+ */
+
+/* Tag Esgotado — PDP, listagens, relacionados, quickshop */
+[data-store='product-item-label-stock'],
+.js-stock-label,
+.js-stock-label-private {
+  display: none !important;
+}
+
+.mp-lead-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: #555;
+  text-align: center;
+}
+
+.mp-lead-cta.btn-add-to-cart,
+.mp-lead-cta.js-prod-submit-form {
+  cursor: pointer !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

@@ -49,3 +49,12 @@ Ver [SECURITY.md](SECURITY.md). Só anon key no front; nunca service role. RLS n
 ## Backend
 
 Projeto: `qabioapmusytvoaevwra` · SQL: [`sql/001_reviews.sql`](sql/001_reviews.sql)
+
+## Leads — Consultar disponibilidade
+
+```text
+https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.css
+https://cdn.jsdelivr.net/gh/vigall/match-point-reviews@{SHA}/dist/consultar-disponibilidade.js
+```
+
+Detalhes: [`docs/consultar-disponibilidade.md`](docs/consultar-disponibilidade.md). Incluir na **mesma tag GTM** das reviews.
