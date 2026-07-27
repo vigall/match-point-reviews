@@ -1,10 +1,10 @@
 /**
- * Match Point — Consultar disponibilidade (PDP + listagens → WhatsApp lead)
+ * Match Point — Consultar disponibilidade (PDP → WhatsApp lead)
  *
  * - Esconde badge "Esgotado" (PDP + listagens)
- * - PDPs: troca Comprar/Esgotado por "Consultar disponibilidade"
- * - Listagens: converte Comprar dos cards; injeta CTA quando o tema omite o botão (estoque 0)
- * - Desbloqueia disabled/nostock e abre WhatsApp com mensagem pronta
+ * - Em todas as PDPs: troca Comprar/Esgotado por "Consultar disponibilidade"
+ * - Desbloqueia botão disabled/nostock e abre WhatsApp com mensagem pronta
+ * - Listagens: sem alteração de CTA (só esconde badge Esgotado)
  */
 (function () {
   'use strict';
@@ -15,7 +15,6 @@
     'Confirme prazo e frete no WhatsApp oficial da Match Point';
   var HANDLER_FLAG = 'data-mp-lead-bound';
   var HINT_FLAG = 'data-mp-lead-hint';
-  var LISTING_INJECT_FLAG = 'data-mp-lead-listing';
 
   function isProductPage() {
     if (document.body && /\btemplate-product\b/.test(document.body.className)) {
@@ -38,16 +37,16 @@
     }
   }
 
-  function cleanUrl(href) {
+  function cleanPageUrl() {
     try {
-      var u = new URL(href, window.location.origin);
+      var u = new URL(window.location.href);
       u.searchParams.delete('_gl');
       u.searchParams.delete('gclid');
       u.searchParams.delete('fbclid');
       u.hash = '';
       return u.toString();
     } catch (e) {
-      return String(href || '').split('#')[0];
+      return window.location.href.split('#')[0];
     }
   }
 
@@ -63,21 +62,7 @@
     );
   }
 
-  function textPrice(el) {
-    if (!el) return null;
-    var raw = el.getAttribute('data-priceraw-without-shipping');
-    var fromRaw = formatCents(raw);
-    if (fromRaw) return fromRaw + ' com Pix';
-    var cents = el.getAttribute('data-product-price');
-    var fromCents = formatCents(cents);
-    if (fromCents) return fromCents;
-    var txt = String(el.textContent || '')
-      .replace(/\s+/g, ' ')
-      .trim();
-    return txt || null;
-  }
-
-  function pdpProductName() {
+  function productName() {
     if (window.LS && LS.product && LS.product.name) {
       return String(LS.product.name).trim();
     }
@@ -87,31 +72,48 @@
     return h1 ? String(h1.textContent || '').trim() : 'produto';
   }
 
-  function pdpProductPrice() {
+  function productPrice() {
     var pix = document.querySelector(
       '.js-price-container .js-payment-discount-price-product'
     );
-    var fromPix = textPrice(pix);
-    if (fromPix) return fromPix;
+    if (pix) {
+      var raw = pix.getAttribute('data-priceraw-without-shipping');
+      var formatted = formatCents(raw);
+      if (formatted) return formatted + ' com Pix';
+      var txt = String(pix.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (txt) return txt;
+    }
 
     var priceEl =
       document.getElementById('price_display') ||
       document.querySelector('.js-price-container .js-price-display');
-    return textPrice(priceEl) || 'sob consulta';
+    if (priceEl) {
+      var cents = priceEl.getAttribute('data-product-price');
+      var fromCents = formatCents(cents);
+      if (fromCents) return fromCents;
+      var priceTxt = String(priceEl.textContent || '')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (priceTxt) return priceTxt;
+    }
+
+    return 'sob consulta';
   }
 
-  function buildWhatsAppUrl(name, price, productUrl) {
+  function buildWhatsAppUrl() {
     var msg =
       'Olá, Match Point! Vi o produto "' +
-      (name || 'produto') +
+      productName() +
       '" por ' +
-      (price || 'sob consulta') +
+      productPrice() +
       ' na loja e quero consultar disponibilidade.\nLink: ' +
-      (productUrl || cleanUrl(window.location.href));
+      cleanPageUrl();
     return 'https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(msg);
   }
 
-  function openWhatsApp(e, meta) {
+  function openWhatsApp(e) {
     if (e) {
       e.preventDefault();
       e.stopPropagation();
@@ -119,10 +121,33 @@
         e.stopImmediatePropagation();
       }
     }
-    meta = meta || {};
-    var url = buildWhatsAppUrl(meta.name, meta.price, meta.url);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(buildWhatsAppUrl(), '_blank', 'noopener,noreferrer');
     return false;
+  }
+
+  function isPdpBuyButton(el) {
+    if (!el || !el.getAttribute) return false;
+    if (el.getAttribute('data-store') === 'product-buy-button') return true;
+    if (el.getAttribute('data-component') === 'product.add-to-cart') return true;
+    if (
+      el.classList.contains('btn-add-to-cart') &&
+      el.classList.contains('js-prod-submit-form') &&
+      !el.getAttribute('data-component-value')
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  function findPdpBuyButtons() {
+    var candidates = document.querySelectorAll(
+      '[data-store="product-buy-button"], [data-component="product.add-to-cart"], .js-addtocart.js-prod-submit-form.btn-add-to-cart'
+    );
+    var out = [];
+    for (var i = 0; i < candidates.length; i++) {
+      if (isPdpBuyButton(candidates[i])) out.push(candidates[i]);
+    }
+    return out;
   }
 
   function setButtonLabel(el) {
@@ -151,26 +176,9 @@
       }
     }
     setButtonLabel(el);
-    hideCartIconsNear(el);
   }
 
-  /** Toluca overlay do sacola fica por cima do texto se a classe cart permanecer. */
-  function hideCartIconsNear(el) {
-    var container =
-      el.closest('.js-item-submit-container') ||
-      el.closest('.item-submit-container') ||
-      el.parentNode;
-    if (!container || !container.querySelectorAll) return;
-    var icons = container.querySelectorAll(
-      '.js-quickshop-bag, .item-quickshop-icon, .js-open-quickshop-icon'
-    );
-    for (var i = 0; i < icons.length; i++) {
-      icons[i].style.setProperty('display', 'none', 'important');
-      icons[i].setAttribute('aria-hidden', 'true');
-    }
-  }
-
-  function ensurePdpHint(el) {
+  function ensureHint(el) {
     var form =
       el.closest('#product_form') ||
       el.closest('.js-product-form') ||
@@ -192,197 +200,38 @@
     host.setAttribute(HINT_FLAG, '1');
   }
 
-  function bindLeadClick(el, meta, withHint) {
+  function bindButton(el) {
     unlockAndRelabel(el);
-    if (withHint) ensurePdpHint(el);
+    ensureHint(el);
     if (el.getAttribute(HANDLER_FLAG) === '1') return;
     el.setAttribute(HANDLER_FLAG, '1');
-    el.addEventListener(
-      'click',
-      function (e) {
-        openWhatsApp(e, meta);
-      },
-      true
-    );
+    el.addEventListener('click', openWhatsApp, true);
   }
 
-  function blockFormSubmit(form, meta) {
+  function blockFormSubmit(form) {
     if (!form || form.getAttribute(HANDLER_FLAG) === '1') return;
     form.setAttribute(HANDLER_FLAG, '1');
-    form.addEventListener(
-      'submit',
-      function (e) {
-        openWhatsApp(e, meta);
-      },
-      true
-    );
-  }
-
-  function isPdpBuyButton(el) {
-    if (!el || !el.getAttribute) return false;
-    if (el.getAttribute('data-store') === 'product-buy-button') return true;
-    if (el.getAttribute('data-component') === 'product.add-to-cart') return true;
-    if (
-      el.classList.contains('btn-add-to-cart') &&
-      el.classList.contains('js-prod-submit-form') &&
-      !el.getAttribute('data-component-value')
-    ) {
-      return true;
-    }
-    return false;
-  }
-
-  function findPdpBuyButtons() {
-    var candidates = document.querySelectorAll(
-      '[data-store="product-buy-button"], [data-component="product.add-to-cart"], .js-addtocart.js-prod-submit-form.btn-add-to-cart'
-    );
-    var out = [];
-    for (var i = 0; i < candidates.length; i++) {
-      if (isPdpBuyButton(candidates[i])) out.push(candidates[i]);
-    }
-    return out;
+    form.addEventListener('submit', openWhatsApp, true);
   }
 
   function enhancePdp() {
     if (!isProductPage()) return;
 
-    var meta = {
-      name: pdpProductName(),
-      price: pdpProductPrice(),
-      url: cleanUrl(window.location.href),
-    };
-
     var buttons = findPdpBuyButtons();
     for (var i = 0; i < buttons.length; i++) {
-      bindLeadClick(buttons[i], meta, true);
+      bindButton(buttons[i]);
     }
 
     var form =
       document.getElementById('product_form') ||
       document.querySelector('.js-product-form') ||
       document.querySelector('form[data-store^="product-form-"]');
-    blockFormSubmit(form, meta);
-  }
-
-  function cardProductUrl(card) {
-    var link =
-      card.querySelector('a[href*="/produtos/"]') ||
-      card.querySelector('.js-item-name a[href]') ||
-      card.querySelector('a.item-link[href]');
-    if (link && link.getAttribute('href')) {
-      return cleanUrl(link.href || link.getAttribute('href'));
-    }
-    var jsonLd = card.querySelector(
-      'script[type="application/ld+json"][data-component="structured-data.item"]'
-    );
-    if (jsonLd) {
-      try {
-        var data = JSON.parse(jsonLd.textContent || '{}');
-        var id =
-          (data.mainEntityOfPage && data.mainEntityOfPage['@id']) || data.url;
-        if (id) return cleanUrl(id);
-      } catch (err) {
-        /* ignore */
-      }
-    }
-    return cleanUrl(window.location.href);
-  }
-
-  function cardProductName(card) {
-    var nameEl =
-      card.querySelector('[data-store^="product-item-name"]') ||
-      card.querySelector('.js-item-name') ||
-      card.querySelector('.item-name');
-    if (nameEl) {
-      return String(nameEl.textContent || '').trim();
-    }
-    var img = card.querySelector('img[alt]');
-    if (img && img.alt) return String(img.alt).trim();
-    return 'produto';
-  }
-
-  function cardProductPrice(card) {
-    var pix = card.querySelector('.js-payment-discount-price-product');
-    var fromPix = textPrice(pix);
-    if (fromPix) return fromPix;
-    var priceEl =
-      card.querySelector('.js-price-display') ||
-      card.querySelector('[data-store^="product-item-price"] .item-price');
-    return textPrice(priceEl) || 'sob consulta';
-  }
-
-  function cardMeta(card) {
-    return {
-      name: cardProductName(card),
-      price: cardProductPrice(card),
-      url: cardProductUrl(card),
-    };
-  }
-
-  function injectListingCta(card, meta) {
-    if (card.getAttribute(LISTING_INJECT_FLAG) === '1') return;
-    if (card.querySelector('.mp-lead-cta-listing')) {
-      card.setAttribute(LISTING_INJECT_FLAG, '1');
-      return;
-    }
-
-    var wrap = document.createElement('div');
-    wrap.className =
-      'js-quickshop-or-stock-container row row-grid mt-3 align-items-center mp-lead-listing-wrap';
-    wrap.innerHTML =
-      '<div class="js-item-quickshop-container item-actions col-grid col-md-9">' +
-      '<button type="button" class="btn btn-primary btn-small btn-block mp-lead-cta mp-lead-cta-listing">' +
-      CTA_LABEL +
-      '</button></div>';
-
-    var btn = wrap.querySelector('button');
-    bindLeadClick(btn, meta, false);
-
-    var anchor =
-      card.querySelector('.js-item-colors-container') ||
-      card.querySelector('[data-nubesdk-slot="after_product_grid_item_price"]') ||
-      card.querySelector('.item-price-container') ||
-      card.querySelector('.js-item-container');
-
-    if (anchor && anchor.parentNode) {
-      anchor.parentNode.insertBefore(wrap, anchor.nextSibling);
-    } else {
-      card.appendChild(wrap);
-    }
-    card.setAttribute(LISTING_INJECT_FLAG, '1');
-  }
-
-  function enhanceListingCards() {
-    var cards = document.querySelectorAll(
-      '.js-item-product[data-product-id], [data-component="product-list-item"][data-product-id]'
-    );
-
-    for (var i = 0; i < cards.length; i++) {
-      var card = cards[i];
-      var meta = cardMeta(card);
-      var buyBtns = card.querySelectorAll(
-        '[data-component="product-list-item.add-to-cart"], .js-item-quickshop-container .js-addtocart'
-      );
-
-      if (buyBtns.length) {
-        for (var j = 0; j < buyBtns.length; j++) {
-          buyBtns[j].classList.add('mp-lead-cta-listing');
-          bindLeadClick(buyBtns[j], meta, false);
-        }
-        var form = card.querySelector('form.js-product-form');
-        blockFormSubmit(form, meta);
-        card.setAttribute(LISTING_INJECT_FLAG, '1');
-      } else {
-        // Estoque 0: Toluca omite o botão — injeta CTA
-        injectListingCta(card, meta);
-      }
-    }
+    blockFormSubmit(form);
   }
 
   function tick() {
     hideStockLabels(document);
     enhancePdp();
-    enhanceListingCards();
   }
 
   function startObserver() {
