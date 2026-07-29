@@ -2,8 +2,8 @@
  * Match Point — Consultar disponibilidade (PDP → WhatsApp lead)
  *
  * - Esconde badge "Esgotado" (PDP + listagens)
- * - Em todas as PDPs: troca Comprar/Esgotado por "Consultar disponibilidade"
- * - Desbloqueia botão disabled/nostock e abre WhatsApp com mensagem pronta
+ * - Só na PDP **sem estoque**: troca Esgotado por "Consultar disponibilidade"
+ * - Produto **com estoque**: mantém Comprar nativo (não altera o botão)
  * - Listagens: sem alteração de CTA (só esconde badge Esgotado)
  */
 (function () {
@@ -100,6 +100,72 @@
     }
 
     return 'sob consulta';
+  }
+
+  function parseVariants() {
+    var el =
+      document.querySelector(
+        '#product_form .js-product-container[data-variants]'
+      ) ||
+      document.querySelector(
+        '.js-product-detail [data-variants], .js-product-container[data-variants]'
+      ) ||
+      document.querySelector('[data-variants]');
+    if (!el) return null;
+    try {
+      var raw = el.getAttribute('data-variants');
+      var variants = JSON.parse(raw);
+      return Array.isArray(variants) ? variants : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  /**
+   * Só trata como esgotado quando há evidência clara.
+   * Na Toluca, LS.product muitas vezes NÃO traz .available — usar botão + variantes.
+   */
+  function isOutOfStock() {
+    var buttons = findPdpBuyButtons();
+    var btn = buttons.length ? buttons[0] : null;
+    if (btn) {
+      var label = String(btn.value || btn.textContent || '').toLowerCase();
+      if (
+        btn.disabled ||
+        btn.classList.contains('nostock') ||
+        /esgotado|sem estoque|indispon/.test(label)
+      ) {
+        return true;
+      }
+      // Botão Comprar ativo = em estoque
+      if (
+        btn.classList.contains('cart') &&
+        !btn.disabled &&
+        /comprar|adicionar/.test(label)
+      ) {
+        return false;
+      }
+    }
+
+    var variants = parseVariants();
+    if (variants && variants.length) {
+      var anyAvailable = false;
+      for (var i = 0; i < variants.length; i++) {
+        var v = variants[i] || {};
+        if (v.available === true || Number(v.stock) > 0) {
+          anyAvailable = true;
+          break;
+        }
+      }
+      return !anyAvailable;
+    }
+
+    if (window.LS && LS.product && typeof LS.product.available === 'boolean') {
+      return !LS.product.available;
+    }
+
+    // Sem sinal claro: não substitui Comprar
+    return false;
   }
 
   function buildWhatsAppUrl() {
@@ -216,6 +282,8 @@
 
   function enhancePdp() {
     if (!isProductPage()) return;
+    // Em estoque: não mexe no Comprar
+    if (!isOutOfStock()) return;
 
     var buttons = findPdpBuyButtons();
     for (var i = 0; i < buttons.length; i++) {

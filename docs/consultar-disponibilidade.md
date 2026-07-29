@@ -5,11 +5,13 @@ Script híbrido (GTM + CDN) para a loja Nuvemshop Toluca.
 ## O que faz
 
 - Esconde a tag **Esgotado** na PDP e nas listagens
-- Em **todas as PDPs**, troca Comprar/Esgotado por **Consultar disponibilidade**
+- Só na PDP **sem estoque**: troca o botão por **Consultar disponibilidade** → WhatsApp
+- PDP **com estoque**: mantém o **Comprar** nativo (não substitui)
 - Desbloqueia o botão quando o tema deixa `disabled` / `nostock`
-- Abre WhatsApp `+55 19 99717-1734` com mensagem pronta (nome, preço, link)
-- Bloqueia add-to-cart no formulário da PDP
+- Bloqueia add-to-cart só quando o CTA de lead está ativo
 - **Listagens:** sem CTA (só esconde badge Esgotado)
+
+Detecção de esgotado (Toluca): botão `nostock`/`disabled`/`Esgotado`, ou todas as variantes com `stock: 0` / `available: false`. `LS.product.available` nem sempre existe nesta loja.
 
 ## Arquivos
 
@@ -46,9 +48,9 @@ Salvar → Enviar → **Publicar**.
    - Botão clicável “Consultar disponibilidade”
    - Abre WhatsApp com produto/preço/link
    - Não adiciona ao carrinho
-2. PDP com estoque: mesmo CTA WhatsApp; preço visível
+2. PDP **com estoque** (ex. HEAD Championship): botão continua **Comprar** (checkout normal)
 3. Listagem: sem tag Esgotado; botão Comprar do card **inalterado**
-4. Mobile: botão principal da PDP também abre WhatsApp
+4. Mobile: PDP esgotada abre WhatsApp; PDP com estoque compra normal
 
 ## Mensagem WhatsApp
 
